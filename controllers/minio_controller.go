@@ -19,23 +19,33 @@ package controllers
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"k8s.io/client-go/kubernetes"
+
+	"k8s.io/client-go/tools/record"
+
+	miniov1alpha1 "minio-operator/api/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	miniov1alpha1 "minio-operator/api/v1alpha1"
 )
 
 // MinIOReconciler reconciles a MinIO object
 type MinIOReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	KubeClient *kubernetes.Clientset
+	Scheme     *runtime.Scheme
+
+	Recorder record.EventRecorder
 }
 
-//+kubebuilder:rbac:groups=minio.bob.com,resources=minios,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=minio.bob.com,resources=minios/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=minio.bob.com,resources=minios/finalizers,verbs=update
+// +kubebuilder:rbac:groups=minio.bob.com,resources=minios,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=minio.bob.com,resources=minios/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=minio.bob.com,resources=minios/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -47,9 +57,12 @@ type MinIOReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-
-	// TODO(user): your logic here
+	var minio miniov1alpha1.MinIO
+	if err := r.Get(ctx, req.NamespacedName, &minio); err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -58,5 +71,7 @@ func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 func (r *MinIOReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&miniov1alpha1.MinIO{}).
+		For(&corev1.Pod{}).
+		For(&corev1.Service{}).
 		Complete(r)
 }
