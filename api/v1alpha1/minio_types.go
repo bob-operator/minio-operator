@@ -46,6 +46,8 @@ type MinIOSpec struct {
 	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate"`
 	// 是否启用 tls
 	EnableCert bool `json:"enableCert,omitempty"`
+	// 是否删除PVC，如果为 true 则在同时删除 PVC
+	ReclaimStorage bool `json:"reclaimStorage,omitempty"`
 
 	ServiceAccountName       string                      `json:"serviceAccountName,omitempty"`
 	Tolerations              []corev1.Toleration         `json:"tolerations,omitempty"`
@@ -114,9 +116,12 @@ type MinIOServiceAddr struct {
 	Console string `json:"console"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:defaulter-gen=true
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=minio
+// +kubebuilder:resource:scope=Namespaced,shortName=minio
 // +kubebuilder:printcolumn:name="status",type=string,JSONPath=`.status.status`
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 
