@@ -17,9 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -27,6 +26,8 @@ import (
 
 // MinIOSpec defines the desired state of MinIO
 type MinIOSpec struct {
+	// 服务池
+	Pools []Pool `json:"pools"`
 	// MinIO 服务镜像
 	Image           string                      `json:"image"`
 	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
@@ -38,27 +39,36 @@ type MinIOSpec struct {
 	Configuration *corev1.LocalObjectReference `json:"configuration,omitempty"`
 	// 是否暴露服务
 	ExposeServices ExposeServices `json:"exposeService,omitempty"`
-	// 服务池需要启动MinIO服务的pod数量
-	Servers int32 `json:"servers"`
-	// 每个服务需要挂载的卷数量
-	VolumesPerServer int32 `json:"volumesPerServer"`
-	// 指定要使用的存储卷
-	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate"`
+
 	// 是否启用 tls
 	EnableCert bool `json:"enableCert,omitempty"`
 	// 是否删除PVC，如果为 true 则在同时删除 PVC
 	ReclaimStorage bool `json:"reclaimStorage,omitempty"`
 
-	ServiceAccountName       string                      `json:"serviceAccountName,omitempty"`
-	Tolerations              []corev1.Toleration         `json:"tolerations,omitempty"`
-	Resources                corev1.ResourceRequirements `json:"resources,omitempty"`
-	NodeSelector             map[string]string           `json:"nodeSelector,omitempty"`
-	Affinity                 *corev1.Affinity            `json:"affinity,omitempty"`
-	Readiness                *corev1.Probe               `json:"readiness,omitempty"`
-	Startup                  *corev1.Probe               `json:"startup,omitempty"`
-	Lifecycle                *corev1.Lifecycle           `json:"lifecycle,omitempty"`
-	SecurityContext          *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
-	ContainerSecurityContext *corev1.SecurityContext     `json:"containerSecurityContext,omitempty"`
+	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
+	Tolerations        []corev1.Toleration         `json:"tolerations,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	Affinity  *corev1.Affinity  `json:"affinity,omitempty"`
+	Liveness  *corev1.Probe     `json:"liveness,omitempty"`
+	Readiness *corev1.Probe     `json:"readiness,omitempty"`
+	Startup   *corev1.Probe     `json:"startup,omitempty"`
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
+}
+
+// 服务池
+type Pool struct {
+	// 服务池名称
+	Name string `json:"name"`
+	// 服务池需要启动MinIO服务的pod数量
+	Servers int `json:"servers"`
+	// 每个服务需要挂载的卷数量
+	VolumesPerServer int `json:"volumesPerServer"`
+	// 指定要使用的存储卷
+	VolumeClaimTemplate      *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate"`
+	NodeSelector             map[string]string             `json:"nodeSelector,omitempty"`
+	SecurityContext          *corev1.PodSecurityContext    `json:"securityContext,omitempty"`
+	ContainerSecurityContext *corev1.SecurityContext       `json:"containerSecurityContext,omitempty"`
 }
 
 type ExposeServices struct {
@@ -92,14 +102,21 @@ const (
 
 // MinIOStatus defines the observed state of MinIO
 type MinIOStatus struct {
-	Status DeployStatus `json:"status"`
+	Status            DeployStatus `json:"status"`
+	AvailableReplicas int          `json:"availableReplicas"`
 	// 状态异常信息
 	Message      string       `json:"message"`
+	PoolStatus   []PoolStatus `json:"poolStatus"`
 	HealthStatus HealthStatus `json:"healthStatus"`
+	// 服务访问地址
+	Service   MinIOServiceAddr `json:"service"`
+	PVCStatus []PVCStatus      `json:"pvcStatus"`
+}
+
+type PoolStatus struct {
+	AvailableReplicas int `json:"availableReplicas"`
 	// 服务状态
 	Servers []MinIOServer `json:"servers"`
-	// 服务访问地址
-	Service MinIOServiceAddr `json:"service"`
 }
 
 // MinIO 服务状态
@@ -116,9 +133,14 @@ type MinIOServiceAddr struct {
 	Console string `json:"console"`
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:defaulter-gen=true
+type PVCStatus struct {
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	Volume       string `json:"volume"`
+	Capacity     string `json:"capacity"`
+	StorageClass string `json:"storageClass"`
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=minio
