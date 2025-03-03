@@ -92,7 +92,8 @@ func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// 默认为 None 状态
 	if minio.Status.Status == "" {
 		minio.Status.Status = miniov1alpha1.DeployStatusNone
-		err := r.updateMinIOStatusWithRetry(ctx, &minio, true)
+		// err := r.updateMinIOStatusWithRetry(ctx, &minio, true)
+		err := updateMinIOStatus(ctx, r.Client, &minio)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -183,7 +184,7 @@ func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			if _, err := r.KubeClient.CoreV1().Pods(minio.Namespace).Create(ctx, &pod, metav1.CreateOptions{}); err != nil {
 				minio.Status.Status = miniov1alpha1.DeployStatusFailed
 				minio.Status.Message = fmt.Sprintf("MinIO Pod Create Failed, %s", err.Error())
-				if err := r.updateMinIOStatusWithRetry(ctx, &minio, true); err != nil {
+				if err := updateMinIOStatus(ctx, r.Client, &minio); err != nil {
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{}, err
@@ -201,7 +202,7 @@ func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			if _, err := r.KubeClient.CoreV1().Pods(minio.Namespace).Update(ctx, &pod, metav1.UpdateOptions{}); err != nil {
 				minio.Status.Status = miniov1alpha1.DeployStatusFailed
 				minio.Status.Message = fmt.Sprintf("MinIO Pod Update Failed, %s", err.Error())
-				if err := r.updateMinIOStatusWithRetry(ctx, &minio, true); err != nil {
+				if err := updateMinIOStatus(ctx, r.Client, &minio); err != nil {
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{}, err
@@ -210,7 +211,7 @@ func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	minio.Status.Status = miniov1alpha1.DeployStatusRunning
-	if err := r.updateMinIOStatusWithRetry(ctx, &minio, true); err != nil {
+	if err := updateMinIOStatus(ctx, r.Client, &minio); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -218,28 +219,28 @@ func (r *MinIOReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 // 更新 MinIO 实例状态
-func (r *MinIOReconciler) updateMinIOStatusWithRetry(ctx context.Context, minio *miniov1alpha1.MinIO, retry bool) error {
-	// if minio.Status.Status == miniov1alpha1.DeployStatusCompleted && minio.Status.AvailableReplicas == minio.Spec.Servers {
-	// 	return nil
-	// }
-
-	minioCopy := minio.DeepCopy()
-	minioCopy.Spec = miniov1alpha1.MinIOSpec{}
-	minioCopy.Status = minio.Status
-
-	if err := r.Status().Update(ctx, minioCopy); err != nil {
-		if errors.IsConflict(err) && retry {
-			klog.Infof("Hit conflict issue, getting latest version of MinIO %s", minio.Name)
-			err = r.Get(ctx, client.ObjectKeyFromObject(minio), minioCopy)
-			if err != nil {
-				return err
-			}
-			return r.updateMinIOStatusWithRetry(ctx, minioCopy, retry)
-		}
-		return err
-	}
-	return nil
-}
+// func (r *MinIOReconciler) updateMinIOStatusWithRetry(ctx context.Context, minio *miniov1alpha1.MinIO, retry bool) error {
+// 	// if minio.Status.Status == miniov1alpha1.DeployStatusCompleted && minio.Status.AvailableReplicas == minio.Spec.Servers {
+// 	// 	return nil
+// 	// }
+//
+// 	minioCopy := minio.DeepCopy()
+// 	minioCopy.Spec = miniov1alpha1.MinIOSpec{}
+// 	minioCopy.Status = minio.Status
+//
+// 	if err := r.Status().Update(ctx, minioCopy); err != nil {
+// 		if errors.IsConflict(err) && retry {
+// 			klog.Infof("Hit conflict issue, getting latest version of MinIO %s", minio.Name)
+// 			err = r.Get(ctx, client.ObjectKeyFromObject(minio), minioCopy)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			return r.updateMinIOStatusWithRetry(ctx, minioCopy, retry)
+// 		}
+// 		return err
+// 	}
+// 	return nil
+// }
 
 // 校验是否需要创建或更新 MinIO Service
 func (r *MinIOReconciler) checkMinIOSvc(ctx context.Context, minio *miniov1alpha1.MinIO) error {
@@ -247,7 +248,7 @@ func (r *MinIOReconciler) checkMinIOSvc(ctx context.Context, minio *miniov1alpha
 	if err != nil {
 		if errors.IsNotFound(err) {
 			minio.Status.Status = miniov1alpha1.DeployStatusRunning
-			if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+			if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 				return err
 			}
 			klog.V(2).Infof("Creating a new Cluster IP Service %s/%s", minio.Namespace, minio.MinIOCIServiceName())
@@ -256,7 +257,7 @@ func (r *MinIOReconciler) checkMinIOSvc(ctx context.Context, minio *miniov1alpha
 			if err != nil {
 				minio.Status.Status = miniov1alpha1.DeployStatusFailed
 				minio.Status.Message = "MinIO Service Create Failed"
-				if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+				if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 					return err
 				}
 				return err
@@ -283,7 +284,7 @@ func (r *MinIOReconciler) checkMinIOSvc(ctx context.Context, minio *miniov1alpha
 		if err != nil {
 			minio.Status.Status = miniov1alpha1.DeployStatusFailed
 			minio.Status.Message = "MinIO Service Update Failed"
-			if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+			if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 				return err
 			}
 			return err
@@ -300,7 +301,7 @@ func (r *MinIOReconciler) checkConsoleSvc(ctx context.Context, minio *miniov1alp
 	if err != nil {
 		if errors.IsNotFound(err) {
 			minio.Status.Status = miniov1alpha1.DeployStatusRunning
-			if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+			if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 				return err
 			}
 			klog.V(2).Infof("Creating a new Console Service %s/%s", minio.Namespace, minio.MinIOConsoleServiceName())
@@ -309,7 +310,7 @@ func (r *MinIOReconciler) checkConsoleSvc(ctx context.Context, minio *miniov1alp
 			if err != nil {
 				minio.Status.Status = miniov1alpha1.DeployStatusFailed
 				minio.Status.Message = "MinIO Console Service Create Failed"
-				if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+				if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 					return err
 				}
 				return err
@@ -334,7 +335,7 @@ func (r *MinIOReconciler) checkConsoleSvc(ctx context.Context, minio *miniov1alp
 		if err != nil {
 			minio.Status.Status = miniov1alpha1.DeployStatusFailed
 			minio.Status.Message = "MinIO Console Service Created Failed"
-			if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+			if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 				return err
 			}
 			return err
@@ -351,7 +352,7 @@ func (r *MinIOReconciler) checkMinIOHLSvc(ctx context.Context, minio *miniov1alp
 	if err != nil {
 		if errors.IsNotFound(err) {
 			minio.Status.Status = miniov1alpha1.DeployStatusRunning
-			if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+			if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 				return err
 			}
 			klog.V(2).Infof("Creating a new Console Service %s/%s", minio.Namespace, minio.MinIOConsoleServiceName())
@@ -360,7 +361,7 @@ func (r *MinIOReconciler) checkMinIOHLSvc(ctx context.Context, minio *miniov1alp
 			if err != nil {
 				minio.Status.Status = miniov1alpha1.DeployStatusFailed
 				minio.Status.Message = "MinIO Headless Service Created Failed"
-				if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+				if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 					return err
 				}
 				return err
@@ -385,7 +386,7 @@ func (r *MinIOReconciler) checkMinIOHLSvc(ctx context.Context, minio *miniov1alp
 		if err != nil {
 			minio.Status.Status = miniov1alpha1.DeployStatusFailed
 			minio.Status.Message = "MinIO Headless Service Created Failed"
-			if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+			if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 				return err
 			}
 			return err
@@ -405,7 +406,7 @@ func (r *MinIOReconciler) checkPVC(ctx context.Context, minio *miniov1alpha1.Min
 	}
 	if len(pvcList.Items) == 0 {
 		minio.Status.Status = miniov1alpha1.DeployStatusRunning
-		if err := r.updateMinIOStatusWithRetry(ctx, minio, true); err != nil {
+		if err := updateMinIOStatus(ctx, r.Client, minio); err != nil {
 			return err
 		}
 		klog.V(2).Info("Creating new PVC")

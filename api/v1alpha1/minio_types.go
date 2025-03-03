@@ -123,6 +123,9 @@ type MinIOStatus struct {
 	// 服务访问地址
 	Service   MinIOServiceAddr `json:"service"`
 	PVCStatus []PVCStatus      `json:"pvcStatus"`
+
+	// 重启次数
+	RestartCount int `json:"restartCount"`
 }
 
 type PoolStatus struct {

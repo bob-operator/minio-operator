@@ -1,0 +1,24 @@
+# permissions for end users to edit miniojobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: miniojob-editor-role
+rules:
+- apiGroups:
+  - minio.bob.com
+  resources:
+  - miniojobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - minio.bob.com
+  resources:
+  - miniojobs/status
+  verbs:
+  - get

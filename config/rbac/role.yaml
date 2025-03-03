@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - minio.bob.com
   resources:
+  - miniojobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - minio.bob.com
+  resources:
+  - miniojobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - minio.bob.com
+  resources:
+  - miniojobs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - minio.bob.com
+  resources:
   - minios
   verbs:
   - create

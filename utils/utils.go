@@ -2,9 +2,13 @@ package utils
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -103,4 +107,34 @@ func ParseRawConfiguration(configuration []byte) (config map[string][]byte) {
 		}
 	}
 	return config
+}
+
+func CreateTransport() *http.Transport {
+	// rootCAs := c.fetchTransportCACertificates()
+	dialer := &net.Dialer{
+		Timeout:   15 * time.Second,
+		KeepAlive: 15 * time.Second,
+	}
+	transport := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           dialer.DialContext,
+		MaxIdleConnsPerHost:   1024,
+		IdleConnTimeout:       15 * time.Second,
+		ResponseHeaderTimeout: 15 * time.Minute,
+		TLSHandshakeTimeout:   15 * time.Second,
+		ExpectContinueTimeout: 15 * time.Second,
+		// Go net/http automatically unzip if content-type is
+		// gzip disable this feature, as we are always interested
+		// in raw stream.
+		DisableCompression: true,
+		TLSClientConfig: &tls.Config{
+			// Can't use SSLv3 because of POODLE and BEAST
+			// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+			// Can't use TLSv1.1 because of RC4 cipher usage
+			MinVersion: tls.VersionTLS12,
+			// RootCAs:    rootCAs,
+		},
+	}
+
+	return transport
 }

@@ -156,7 +156,7 @@ func (r *MinIOStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	minio.Status.Status = deployStatus
 
-	if err := r.updateMinIOStatus(ctx, &minio); err != nil {
+	if err := updateMinIOStatus(ctx, r.Client, &minio); err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
 
@@ -167,23 +167,38 @@ func (r *MinIOStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-func (r *MinIOStatusReconciler) updateMinIOStatus(ctx context.Context, minio *miniov1alpha1.MinIO) error {
-	// if minio.Status.Status == miniov1alpha1.DeployStatusCompleted && minio.Status.AvailableReplicas == minio.Spec.Servers {
-	// 	return nil
-	// }
+// func (r *MinIOStatusReconciler) updateMinIOStatus(ctx context.Context, minio *miniov1alpha1.MinIO) error {
+// 	minioCopy := minio.DeepCopy()
+// 	minioCopy.Spec = miniov1alpha1.MinIOSpec{}
+// 	minioCopy.Status = minio.Status
+//
+// 	if err := r.Status().Update(ctx, minioCopy); err != nil {
+// 		if errors.IsConflict(err) {
+// 			klog.Infof("Hit conflict issue, getting latest version of MinIO %s", minio.Name)
+// 			err = r.Get(ctx, client.ObjectKeyFromObject(minio), minioCopy)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			return r.updateMinIOStatus(ctx, minioCopy)
+// 		}
+// 		return err
+// 	}
+// 	return nil
+// }
 
+func updateMinIOStatus(ctx context.Context, cc client.Client, minio *miniov1alpha1.MinIO) error {
 	minioCopy := minio.DeepCopy()
 	minioCopy.Spec = miniov1alpha1.MinIOSpec{}
 	minioCopy.Status = minio.Status
 
-	if err := r.Status().Update(ctx, minioCopy); err != nil {
+	if err := cc.Status().Update(ctx, minioCopy); err != nil {
 		if errors.IsConflict(err) {
 			klog.Infof("Hit conflict issue, getting latest version of MinIO %s", minio.Name)
-			err = r.Get(ctx, client.ObjectKeyFromObject(minio), minioCopy)
+			err = cc.Get(ctx, client.ObjectKeyFromObject(minio), minioCopy)
 			if err != nil {
 				return err
 			}
-			return r.updateMinIOStatus(ctx, minioCopy)
+			return updateMinIOStatus(ctx, cc, minioCopy)
 		}
 		return err
 	}

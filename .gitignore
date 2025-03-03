@@ -5,7 +5,8 @@
 *.dll
 *.so
 *.dylib
-bin
+bin/*
+!bin/controller-gen
 testbin/*
 
 # Test binary, build with `go test -c`
@@ -23,3 +24,12 @@ testbin/*
 *.swp
 *.swo
 *~
+
+.DS_Store
+**/.DS_Store
+
+.vscode
+.fleet
+.chat
+cover.out
+*.tar

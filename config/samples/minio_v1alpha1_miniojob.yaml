@@ -1,0 +1,6 @@
+apiVersion: minio.bob.com/v1alpha1
+kind: MinIOJob
+metadata:
+  name: miniojob-sample
+spec:
+  # TODO(user): Add fields here
