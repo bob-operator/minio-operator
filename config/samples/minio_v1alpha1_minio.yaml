@@ -1,0 +1,6 @@
+apiVersion: minio.bob.com/v1alpha1
+kind: MinIO
+metadata:
+  name: minio-sample
+spec:
+  # TODO(user): Add fields here
