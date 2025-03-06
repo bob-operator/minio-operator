@@ -1,0 +1,24 @@
+# Default values for minio-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: "minio-controller-manager"
+
+replicaCount: 1
+
+operatorImage:
+  # dev.repo.bj.bob/public-docker-baseimage-local/sunmoonsky-operator:v0.0.26
+  repository: "172.16.5.67/minio/minio-operator"
+  tag: "v0.0.1"
+  pullPolicy: Always
+
+proxyImage:
+  # dev.repo.bj.bob/public-docker-baseimage-local/kube-rbac-proxy:0.11.0
+  repository: "172.16.5.67/sunmoonsky/kube-rbac-proxy"
+  tag: "0.11.0"
+
+service:
+  name: minio-operator-webhook-service
+
+namespace: operators

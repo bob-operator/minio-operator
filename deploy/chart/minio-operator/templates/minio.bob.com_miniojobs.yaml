@@ -3,8 +3,9 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
     controller-gen.kubebuilder.io/version: v0.9.0
-  creationTimestamp: null
   name: miniojobs.minio.bob.com
 spec:
   group: minio.bob.com

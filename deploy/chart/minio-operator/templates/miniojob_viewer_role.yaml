@@ -1,0 +1,20 @@
+# permissions for end users to view miniojobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: miniojob-viewer-role
+rules:
+- apiGroups:
+  - minio.bob.com
+  resources:
+  - miniojobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - minio.bob.com
+  resources:
+  - miniojobs/status
+  verbs:
+  - get
